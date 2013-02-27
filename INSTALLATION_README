@@ -1,0 +1,8 @@
+To install directly from this git, simply COPY & PASTE the block of code below into your Raspberry Pi's terminal window:
+
+sudu su
+cd /usr/bin/
+wget https://raw.github.com/Mark-Leck/Configurator/master/configurator
+chmod +x configurator
+configurator
+echo "Done!"
