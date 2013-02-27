@@ -59,7 +59,7 @@ while test $PCT != 100;
 do 
 PCT=`expr $PCT + 5`; 
 echo $PCT; 
-wget http://www.juicypi.com/downloads/configurator_updates/version -O /tmp/version > /tmp/updatelog 2>&1 
+wget https://raw.github.com/Mark-Leck/Configurator/master/version -O /tmp/version > /tmp/updatelog 2>&1 
 done; ) | whiptail --title ">>> Configurator Auto Updater <<<" --gauge "Connecting to update server & checking for any available updates. 
 
 If no updates are available then Configurator will now start...." 20 60 0
@@ -79,7 +79,7 @@ while test $DWL != 100;
 do
 DWL=`expr $DWL+ 5`; 
 echo $DWL; 
-wget http://www.juicypi.com/downloads/configurator_updates/configurator -O /usr/bin/configurator > /tmp/updatelog 2>&1 
+wget https://raw.github.com/Mark-Leck/Configurator/master/configurator -O /usr/bin/configurator > /tmp/updatelog 2>&1 
 done; ) | whiptail --title ">>> Configurator Updater <<<" --gauge "Downloading and installing update, please wait....." 20 60 0
 rm -f /tmp/version
 whiptail --msgbox "All Done!
@@ -1608,7 +1608,7 @@ while test $PCT != 100;
 do 
 PCT=`expr $PCT + 5`; 
 echo $PCT; 
-GIT-wget http://www.juicypi.com/downloads/configurator_updates/version -O /tmp/version > /tmp/updatelog 2>&1 
+wget https://raw.github.com/Mark-Leck/Configurator/master/version -O /tmp/version > /tmp/updatelog 2>&1 
 done; ) | whiptail --title ">>> Configurator Updater <<<" --gauge "Connecting to update server & checking for any available updates...." 20 60 0
 . /tmp/version
 if [ -n "$UPDATE" ] && [ $VERSION -eq $UPDATE ]; then
@@ -1630,7 +1630,7 @@ while test $DWL != 100;
 do
 DWL=`expr $DWL+ 5`; 
 echo $DWL; 
-GIT-wget http://www.juicypi.com/downloads/configurator_updates/configurator -O /usr/bin/configurator > /tmp/updatelog 2>&1 
+wget https://raw.github.com/Mark-Leck/Configurator/master/configurator -O /usr/bin/configurator > /tmp/updatelog 2>&1 
 done; ) | whiptail --title ">>> Configurator Updater <<<" --gauge "Downloading and installing update, please wait....." 20 60 0
 rm -f /tmp/version
 do_restart2
@@ -1951,7 +1951,7 @@ while test $PCT != 100;
 do 
 PCT=`expr $PCT + 20`; 
 echo $PCT; 
-wget http://www.juicypi.com/downloads/configurator_dropbox -O /usr/bin/configurator_dropbox > /tmp/debugwget.log 2>&1 
+wget https://raw.github.com/Mark-Leck/Configurator/master/configurator_dropbox -O /usr/bin/configurator_dropbox > /tmp/debugwget.log 2>&1 
 chmod +x /usr/bin/configurator_dropbox
 done; ) | whiptail --title ">>> Configurator Downloader <<<" --gauge "Downloading & installing the Configurator Dropbox addon, please wait....." 20 70 0
 configurator_dropbox
@@ -2077,7 +2077,7 @@ while test $PCT != 100;
 do 
 PCT=`expr $PCT + 20`; 
 echo $PCT; 
-GIT-wget http://www.juicypi.com/downloads/configurator_dropbox -O /usr/bin/configurator_dropbox > /tmp/debugwget.log 2>&1 
+wget https://raw.github.com/Mark-Leck/Configurator/master/configurator_dropbox -O /usr/bin/configurator_dropbox > /tmp/debugwget.log 2>&1 
 chmod +x /usr/bin/configurator_dropbox
 done; ) | whiptail --title ">>> Configurator Downloader <<<" --gauge "Downloading & installing the Configurator Dropbox addon, please wait....." 20 70 0
 configurator_dropbox
