@@ -1,0 +1,2238 @@
+#!/bin/sh
+# Configurator
+# GUI/SCRIPT based config.txt editor & benchmarking tools for the Raspberry Pi by Mark Leck
+# Also allows backup to FTP and Dropbox of the .xbmc folder in Raspbmc
+# Copyright (C) 2010-2012 Mark leck Email:Mark@juicypi.com
+# Or PM Mark @ forum.stmlabs.com
+# I have too much time on my hands :)
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+clear all
+if [ $(id -u) -ne 0 ]; then
+ printf "Script must be run as root. Try 'sudo configurator' \n"
+  exit 1
+fi
+#Thanks Sam:
+if [ ! -f /usr/bin/whiptail ] 
+ then
+firstboot=1
+clear all
+echo "####################################################################"
+sleep 1
+echo "######## First we need to install a couple of dependencies #########"
+sleep 1
+echo "##### Please make sure that your Pi has an internet connection! ####"
+sleep 1
+echo "####################################################################"
+sleep 2
+ apt-get update
+ apt-get -y install whiptail
+ fi
+entry=0
+ASK_TO_REBOOT=0
+VERSION=27022013
+
+if [ -f /usr/bin/configurator_dropbox ] && [ ! -f /tmp/.dropbox_update ]; then
+rm -f /usr/bin/configurator_dropbox
+fi
+
+while (true); do
+if [ -n "$firstboot" ]; then
+break
+elif [ -f /home/pi/.noauto ]; then
+break
+else
+PCT=0
+( 
+while test $PCT != 100; 
+do 
+PCT=`expr $PCT + 5`; 
+echo $PCT; 
+wget http://www.juicypi.com/downloads/configurator_updates/version -O /tmp/version > /tmp/updatelog 2>&1 
+done; ) | whiptail --title ">>> Configurator Auto Updater <<<" --gauge "Connecting to update server & checking for any available updates. 
+
+If no updates are available then Configurator will now start...." 20 60 0
+. /tmp/version
+if [ -n "$UPDATE" ] && [ $VERSION -eq $UPDATE ]; then
+break
+elif [ ! -n "$UPDATE" ]; then
+break
+else 
+
+whiptail --msgbox "A more recent version of Configurator is available for download
+
+Click OK to download now..." 20 60 20
+DWL=0
+( 
+while test $DWL != 100; 
+do
+DWL=`expr $DWL+ 5`; 
+echo $DWL; 
+wget http://www.juicypi.com/downloads/configurator_updates/configurator -O /usr/bin/configurator > /tmp/updatelog 2>&1 
+done; ) | whiptail --title ">>> Configurator Updater <<<" --gauge "Downloading and installing update, please wait....." 20 60 0
+rm -f /tmp/version
+whiptail --msgbox "All Done!
+
+The new changes will take effect the next time Configurator is Ran" 20 60 20
+break
+fi
+fi
+done
+
+
+
+
+do_Readme() {
+  whiptail --msgbox "Configurator is the easy way to write & edit the config.txt file for your Raspberry Pi \n
+Configurator now offers a full GUI in both Advanced & Normal program modes & covers the vast majority of regulary used settings + 5 custom entries can also be added also includes the Magic AI system for Raspbmc users. \n
+Custom Configurator allows up to 15 entries (this is for those who like to be in full control).\n
+Benchmarking & tools now added with upload results to pastebin feature.\n
+Magic AI System - Auto-Magically imports all config.txt entries into the Raspbmc-Settings addon.
+
+Update facility added, be sure to check regulary for any available Configurator updates!
+
+Backup+Restore via FTP & Dropbox now added - Backup your .xbmc folder and store remotely, then restore with total ease!
+
+Dropbox feature now added - upload/download anyfile to & from your Dropbox account!
+ 
+Any questions or suggestions, feel free to PM me.
+Mark @ forum.stmlabs.com \n
+Enjoy!" 35 70 2
+}
+
+
+do_Configurator() {
+if [ $entry -eq 0 ]; then # yes
+do_agreement
+else
+do_restart
+fi
+}
+
+do_agreement() {
+   whiptail --yesno "By choosing the YES button below; YOU (the user) agree that you have read the 'README' and that any loss or damage incurred as a result of using this software is soley the responsibility of YOU (the user) 
+\n\
+Choose YES to AGREE & CONTINUE 
+\n\
+or 
+\n\
+Choose NO to EXIT" 20 60 2 --defaultno	
+if [ $? -eq 0 ]; then # yes
+	  do_2a
+	fi
+}
+
+do_Custom_Configurator() {
+	 whiptail --yesno "By choosing the YES button below; YOU (the user) agree that you have read the 'README' and that any loss or damage incurred as a result of using this software is soley the responsibility of YOU (the user)
+\n\
+Choose YES to AGREE & CONTINUE 
+\n\
+or 
+\n\
+Choose NO to EXIT" 20 60 2 --defaultno  
+if [ $? -eq 0 ]; then # yes
+	  do_custom6
+	fi
+
+}
+
+do_Restore_Raspbmc_Defaults() {
+	 whiptail --yesno "By choosing the YES button below; YOU (the user) agree that you have read the 'README' and that any loss or damage incurred as a result of using this software is soley the responsibility of YOU (the user)
+\n\
+Choose YES to AGREE & CONTINUE 
+\n\
+or 
+\n\
+Choose NO to EXIT" 20 60 2 --defaultno  
+if [ $? -eq 0 ]; then # yes
+	  do_raspbmc1
+	fi
+
+}
+
+do_custom6() {
+clear all
+echo "###############################################################"
+echo "##################### Custom Configurator  ####################"
+echo "###############################################################"
+# Start OC /boot/config.txt editor
+echo "##### Backing up /boot/config.txt to /boot/config.txt.old #####"
+mv -f /boot/config.txt /boot/config.txt.old
+sleep 1
+echo "############# Removing existing config.txt file ###############"
+sleep 1
+echo "#### Creating New config.txt file with default RPI values #####"
+touch /boot/config.txt
+echo "#Below is a snapshot of your NEW custom config.txt file
+
+#a
+#b
+#c
+#d
+#e
+#f
+#g
+#h
+#i
+#j
+#k
+#l
+#m
+#n
+#o
+
+#Choose OK to continue...... " > /boot/config.txt
+echo "################ Starting Custom Configuarator ################"
+sleep 1
+echo "###############################################################"
+do_ae
+}
+
+do_ae() {
+read -p "please enter your custom config.txt edit :" custom1
+sed -i "s/#a.*/$custom1/" /boot/config.txt
+read -p "please enter your custom config.txt edit :" custom2
+sed -i "s/#b.*/$custom2/" /boot/config.txt
+read -p "please enter your custom config.txt edit :" custom3
+sed -i "s/#c.*/$custom3/" /boot/config.txt
+read -p "please enter your custom config.txt edit :" custom4
+sed -i "s/#d.*/$custom4/" /boot/config.txt
+read -p "please enter your custom config.txt edit :" custom5
+sed -i "s/#e.*/$custom5/" /boot/config.txt
+do_fj
+}
+
+#add more?
+do_fj() {
+  whiptail --yesno "Would you like to add anymore custom config.txt edits?" 20 60 2 --defaultno
+if [ $? -eq 0 ]; then # yes
+read -p "please enter your custom config.txt edit :" custom1
+sed -i "s/#f.*/$custom1/" /boot/config.txt
+read -p "please enter your custom config.txt edit :" custom2
+sed -i "s/#g.*/$custom2/" /boot/config.txt
+read -p "please enter your custom config.txt edit :" custom3
+sed -i "s/#h.*/$custom3/" /boot/config.txt
+read -p "please enter your custom config.txt edit :" custom4
+sed -i "s/#i.*/$custom4/" /boot/config.txt
+read -p "please enter your custom config.txt edit :" custom5
+sed -i "s/#j.*/$custom5/" /boot/config.txt
+do_ko
+ else
+do_seeconfig
+fi
+}
+
+# add more?
+do_ko() {
+  whiptail --yesno "Would you like to add anymore custom config.txt edits?" 20 60 2 --defaultno  
+if [ $? -eq 0 ]; then # yes
+read -p "please enter your custom config.txt edit :" custom1
+sed -i "s/#k.*/$custom1/" /boot/config.txt
+read -p "please enter your custom config.txt edit :" custom2
+sed -i "s/#l.*/$custom2/" /boot/config.txt
+read -p "please enter your custom config.txt edit :" custom3
+sed -i "s/#m.*/$custom3/" /boot/config.txt
+read -p "please enter your custom config.txt edit :" custom4
+sed -i "s/#n.*/$custom4/" /boot/config.txt
+read -p "please enter your custom config.txt edit :" custom5
+sed -i "s/#o.*/$custom5/" /boot/config.txt
+ whiptail --msgbox "You have reached the maximum of 15 allowed custom entries!" 20 60 2
+do_seeconfig
+ else
+do_seeconfig
+fi
+}
+
+do_resetvars() {
+gpu=0
+gpucore=0
+overvolt=0
+sdram=0
+}
+
+#normal mode
+do_false() {
+entry=1
+#printf '\033c'
+do_resetvars
+mv -f /boot/config.txt /boot/config.txt.old
+if [  -f /splash/splash.png ] 
+ then
+sed -i "s|addition\" value=\".*|addition\" value=\"\" |" /home/pi/.xbmc/userdata/addon_data/script.raspbmc.settings/settings.xml
+fi
+do_createconfig
+CHOICE=$(whiptail --menu "Please Select a performance mode..." 20 60 10 \
+               NORMAL "" \
+               FAST "" \
+               SUPER "" \
+      		 3>&1 1>&2 2>&3)
+  RET=$?
+  if [ $RET  -eq 0 ]; then
+        do_$CHOICE || whiptail --msgbox "There was an error running do_$CHOICE"
+  fi
+}
+
+do_NORMAL() {
+profile=0
+cpu=800
+overscan=0
+turbo=1
+ans=false
+do_configstart2
+}
+do_FAST() {
+profile=1
+cpu=840
+sdram=400
+gpu=253
+gpucore=350
+overscan=0
+turbo=1
+ans=false
+do_configstart2
+}
+do_SUPER() {
+profile=2
+cpu=950
+isp=450
+sdram=450
+gpucore=450
+overvolt=6
+overscan=0
+ans=false
+turbo=0
+do_configstart2
+}
+
+#advanced mode
+do_true() {
+advanced=true
+entry=1
+# Start OC /boot/config.txt editor
+mv -f /boot/config.txt /boot/config.txt.old
+do_createconfig
+do_configstart
+}
+
+do_createconfig() {
+touch /boot/config.txt
+echo "#Below is a snapshot of your NEW config.txt file
+
+#hdmi_force_hotplug=0
+#hdmi_group=0
+#hdmi_mode=0
+#config_hdmi_boost=0
+#sdtv_mode=2
+#init_emmc_freq=50000000
+#over_voltage_sdram=0
+#forceturbo2a
+#1
+#2
+#3
+#4
+#5
+#arm_freq=700
+#core_freq=250
+#gpu_freq=250
+#isp_freq=250
+#sdram_freq=400
+#force_turbo=1
+#forceturbo2b
+#decode_MPG2=0
+#decode_WVC1=0
+#over_voltage=0
+#disable_overscan=1
+
+
+
+#Choose OK to CONTINUE.....
+" > /boot/config.txt
+}
+
+do_configstart2() {
+sed -i "s/#arm_freq.*/arm_freq=$cpu /" /boot/config.txt
+sed -i "s/#gpu_freq.*/gpu_freq=$gpu/" /boot/config.txt
+sed -i "s/#isp_freq.*/isp_freq=$isp/" /boot/config.txt
+sed -i "s/#core_freq.*/core_freq=$gpucore/" /boot/config.txt
+sed -i "s/#sdram_freq.*/sdram_freq=$sdram/" /boot/config.txt
+sed -i "s/#force_turbo.*/force_turbo=$turbo/" /boot/config.txt
+sed -i "s/force_turbo=0//" /boot/config.txt
+sed -i "s/#over_voltage=0/over_voltage=$overvolt/" /boot/config.txt
+sed -i "s/over_voltage=0//" /boot/config.txt
+sed -i "s/gpu_freq=0//" /boot/config.txt
+sed -i "s/sdram_freq=0//" /boot/config.txt
+sed -i "s/core_freq=0//" /boot/config.txt   
+sed -i "s/#disable_overscan.*/disable_overscan=$overscan/" /boot/config.txt
+do_configurator2
+}
+
+do_configstart() {
+
+cpu=$(whiptail --inputbox "Please enter your CPU frequency in mhz - 
+
+or
+
+Choose CANCEL for Default values...." 20 60 3>&1 1>&2 2>&3)
+
+answer=$?
+if [ $answer -eq 0 ] && [ -n "$cpu" ]; then
+sed -i "s/#arm_freq.*/arm_freq=$cpu/" /boot/config.txt
+elif [ -n "cpu" ]; then
+cpu=700
+sed -i "s/#arm_freq.*/arm_freq=$cpu/" /boot/config.txt
+else
+cpu=700
+sed -i "s/#arm_freq.*/arm_freq=$cpu/" /boot/config.txt
+fi
+
+
+gpu=$(whiptail --inputbox "Please enter your GPU frequency in mhz - 
+
+or
+
+Choose CANCEL for Default Values...." 20 60 3>&1 1>&2 2>&3)
+answer=$?
+if [ $answer -eq 0 ]; then
+sed -i "s/#gpu_freq.*/gpu_freq=$gpu/" /boot/config.txt
+fi
+
+isp=$(whiptail --inputbox "Please enter your Image Sensor Pipe frequency in mhz - 
+
+or
+
+Choose CANCEL for Default Values...." 20 60 3>&1 1>&2 2>&3)
+answer=$?
+if [ $answer -eq 0 ]; then
+sed -i "s/#isp_freq.*/isp_freq=$isp/" /boot/config.txt
+fi
+
+
+gpucore=$(whiptail --inputbox "Please enter your GPU Core frequency in mhz - 
+
+or
+
+Choose CANCEL for Default Values...." 20 60 3>&1 1>&2 2>&3)
+answer=$?
+if [ $answer -eq 0 ]; then
+sed -i "s/#core_freq.*/core_freq=$gpucore/" /boot/config.txt
+fi
+
+sdram=$(whiptail --inputbox "Please enter your SDRAM frequency in mhz -
+
+or
+
+Choose CANCEL for Default Values...." 20 60 3>&1 1>&2 2>&3)
+answer=$?
+if [ $answer -eq 0 ]; then
+sed -i "s/#sdram_freq.*/sdram_freq=$sdram/" /boot/config.txt
+do_configurator
+else
+do_configurator
+fi
+}
+
+do_configurator() {
+do_overscan
+do_hotplug
+do_hdmi
+do_hdmimd
+do_hdmibst
+do_sdtv
+do_sdhz
+do_turbo
+do_danger
+do_license
+do_license2
+do_rbmccustom
+}
+
+do_configurator2() {
+do_overscan
+do_hotplug
+do_hdmi
+do_hdmimd
+do_hdmibst
+do_sdtv
+do_sdhz
+do_license
+do_license2
+do_rbmccustom
+}
+
+do_overscan() {
+ans=false
+overscan=0
+sed -i "s/#disable_overscan.*/disable_overscan=0/" /boot/config.txt
+whiptail --yesno "Do you wish to Enable or Disable Overscan?
+(Default = Disabled) " 20 60 2 --yes-button "Disable" --no-button "Enable"
+if [ $? -eq 0 ]; then # yes
+sed -i "s/disable_overscan=0/disable_overscan=1/" /boot/config.txt
+ans=true
+fi
+}
+
+do_turbo() {
+whiptail --yesno "Do you wish to Enable or Disable force turbo mode?
+
+(Default = Disabled) " 20 60 2 --defaultno --yes-button "Enable" --no-button "Disable"
+if [ $? -eq 0 ]; then # yes
+          sed -i "s/#force_turbo.*/force_turbo=1/" /boot/config.txt
+turbo=1
+fi 
+}
+
+
+do_hotplug() {
+whiptail --yesno "Do you wish to Enable or Disable force HDMI mode?
+
+(Default = Disabled) " 20 60 2 --defaultno --yes-button "Enable" --no-button "Disable"
+if [ $? -eq 0 ]; then # yes
+          sed -i "s/#hdmi_force_hotplug.*/hdmi_force_hotplug=1/" /boot/config.txt
+hdmi=hdmi_force_hotplug=1\;
+fi 
+}
+do_sdtv() {
+whiptail --yesno "Do you wish to select & set your SDTV mode?" 20 60 2 --defaultno 
+if [ $? -eq 0 ]; then # yes
+do_sdtvmode
+fi
+}
+
+do_sdtvmode() {
+SDTVMODE=$(whiptail --menu "Please Select your SDTV region..." 20 60 10 \
+	mode_0 "Normal NTSC" \
+	mode_1 "Japanese version of NTSC no pedestal" \
+	mode_2 "Normal PAL" \
+	mode_3 "Brazilian PAL, different subcarrier" \
+                 3>&1 1>&2 2>&3)
+  RET=$?
+  if [ $RET  -eq 0 ]; then
+        do_$SDTVMODE || whiptail --msgbox "There was an error running do_$SDTVMODE"
+  fi
+}
+
+do_hdmi() {
+whiptail --yesno "Do you wish to select & set your HDMI group?" 20 60 2 --defaultno 
+if [ $? -eq 0 ]; then # yes
+do_hdmigroup
+fi
+}
+
+do_hdmigroup() {
+HDMIGROUP=$(whiptail --menu "Please Select your HDMI group?" 20 60 10 \
+        group_1 "CEA" \
+        group_2 "DMT" \
+                 3>&1 1>&2 2>&3)
+  RET=$?
+  if [ $RET  -eq 0 ]; then
+        do_$HDMIGROUP || whiptail --msgbox "There was an error running do_$HDMIGROUP"
+  fi
+}
+
+do_hdmimd() {
+whiptail --yesno "Do you wish to select & set your HDMI mode?" 20 60 2 --defaultno 
+if [ $? -eq 0 ]; then # yes
+do_hdmimode
+fi
+}
+
+do_hdmimode() {
+hdmimode=$(whiptail --inputbox "Please enter your HDMI mode number?" 20 60 3>&1 1>&2 2>&3)
+answer=$?
+if [ $answer -eq 0 ]; then
+hdmimd=hdmi_mode=$hdmimode\;
+sed -i "s/#hdmi_mode=0/hdmi_mode=$hdmimode/" /boot/config.txt
+fi
+}
+
+
+do_group_1() {
+sed -i "s/#hdmi_group.*/hdmi_group=1/" /boot/config.txt
+hdmigp=hdmi_group=1\;
+}
+
+do_group_2() {
+sed -i "s/#hdmi_group.*/hdmi_group=2/" /boot/config.txt
+hdmigp=hdmi_group=2\;
+}
+
+
+do_mode_0() {
+sed -i "s/#sdtv.*/sdtv_mode=0/" /boot/config.txt
+sdtv=sdtv_mode=0\;
+}
+
+
+do_mode_1() {
+sed -i "s/#sdtv.*/sdtv_mode=1/" /boot/config.txt
+sdtv=sdtv_mode=1\;
+}
+
+do_mode_2() {
+sed -i "s/#sdtv.*/sdtv_mode=2/" /boot/config.txt
+sdtv=sdtv_mode=2\;
+}
+
+do_mode_3() {
+sed -i "s/#sdtv.*/sdtv_mode=3/" /boot/config.txt
+sdtv=sdtv_mode=3\;
+}
+
+do_hdmibst() {
+whiptail --yesno "Do you wish to boost your HDMI signal? 
+\n
+Choose YES to CONTINUE 
+\n
+or
+\n
+Choose NO to EXIT" 20 60 2 --defaultno
+if [ $? -eq 0 ]; then # yes
+          do_boost
+        fi
+}
+
+do_boost() {
+hdmiboost=$(whiptail --inputbox "Please enter a number from 0 - 7
+if you are unsure, try 4...." 20 60 3>&1 1>&2 2>&3)
+answer=$?
+if [ $answer -eq 0 ]; then
+sed -i "s/#config_hdmi_boost=0/config_hdmi_boost=$hdmiboost/" /boot/config.txt
+vhdmibst=config_hdmi_boost=$hdmiboost\;
+fi
+}
+
+
+do_sdhz() {
+whiptail --yesno "Do you wish to overclock your SD Card frequency? 
+\n\
+WARNING: Altering your SD Card frequency while overclocking can cause system instability issues.
+\n
+Choose YES to CONTINUE 
+\n
+or
+\n
+Choose NO to EXIT" 20 60 2 --defaultno
+if [ $? -eq 0 ]; then # yes
+          do_sdhzoc
+        fi
+}
+
+do_rbmccustom() {
+whiptail --yesno "Do you wish to add any custom entries? 
+\n
+Choose YES to CONTINUE 
+\n
+or
+\n
+Choose NO to EXIT" 20 60 2 --defaultno
+if [ $? -eq 0 ]; then # yes
+do_rbmcaddcustom
+do_isitxbmc
+else
+do_isitxbmc
+fi
+}
+
+do_rbmcaddcustom() {
+custom1=$(whiptail --inputbox "Please enter your 1st custom config.txt edit below -
+ 
+or
+ 
+Choose CANCEL to Continue...." 20 60 3>&1 1>&2 2>&3)
+answer=$?
+if [ $answer -eq 0 ]; then
+cus1=$custom1\;
+sed -i "s/#1.*/$custom1/" /boot/config.txt
+fi
+
+custom2=$(whiptail --inputbox "Please enter your 2nd custom config.txt edit below - 
+ 
+or 
+ 
+Choose CANCEL to Continue...." 20 60 3>&1 1>&2 2>&3)
+answer=$?
+if [ $answer -eq 0 ]; then
+cus2=$custom2\;
+sed -i "s/#2.*/$custom2/" /boot/config.txt
+fi
+
+custom3=$(whiptail --inputbox "Please enter your 3rd custom config.txt edit below - 
+ 
+or 
+ 
+Choose CANCEL to Continue...." 20 60 3>&1 1>&2 2>&3)
+answer=$?
+if [ $answer -eq 0 ]; then
+cus3=$custom3\;
+sed -i "s/#3.*/$custom3/" /boot/config.txt4
+fi
+
+custom4=$(whiptail --inputbox "Please enter your 4th custom config.txt edit below - 
+ 
+or 
+ 
+Choose CANCEL to Continue...." 20 60 3>&1 1>&2 2>&3)
+answer=$?
+if [ $answer -eq 0 ]; then
+cus4=$custom4\;
+sed -i "s/#4.*/$custom4/" /boot/config.txt
+fi
+}
+
+do_cus5() {
+custom5=$(whiptail --inputbox "Please enter your last custom config.txt edit below - 
+ 
+or 
+ 
+Choose CANCEL to Continue...." 20 60 3>&1 1>&2 2>&3)
+answer=$?
+if [ $answer -eq 0 ]; then
+cus5=$custom5\;
+sed -i "s/#5.*/$custom5/" /boot/config.txt
+whiptail --msgbox "You have reached the maximum of 5 allowed custom entries!" 20 60 2
+fi
+}
+
+do_sdhzoc() {
+sdhz=$(whiptail --inputbox "Please enter your SD Card frequency in hz - 
+
+Default = 50000000" 20 60 3>&1 1>&2 2>&3)
+answer=$?
+if [ $answer -eq 0 ]; then
+init=init_emmc_freq=$sdhz\;
+sed -i "s/#init_emmc_freq.*/init_emmc_freq=$sdhz/" /boot/config.txt
+fi
+}
+
+do_license() {
+whiptail --yesno "Do you wish to add your MPEG2 codec license key?
+\n\
+Choose YES to CONTINUE
+\n
+or
+\n
+Choose NO to EXIT" 20 60 2 --defaultno
+if [ $? -eq 0 ]; then # yes
+          do_addmpeg
+        fi
+}
+
+do_addmpeg() {
+mpeg=$(whiptail --inputbox "Please enter your MPEG2 Licence Key...." 20 60 3>&1 1>&2 2>&3)
+answer=$?
+if [ $answer -eq 0 ]; then
+sed -i "s/#decode_MPG2=.*/decode_MPG2=$mpeg/" /boot/config.txt
+fi
+}
+
+do_license2() {
+whiptail --yesno "Do you wish to add your VC1 codec license key?
+\n\
+Choose YES to CONTINUE 
+\n
+or
+\n
+Choose NO to EXIT" 20 60 2 --defaultno
+if [ $? -eq 0 ]; then # yes
+          do_addvc1
+
+        fi
+}
+
+do_addvc1() {
+vc1=$(whiptail --inputbox "Please enter your vc1 Licence Key...." 20 60 3>&1 1>&2 2>&3)
+answer=$?
+if [ $answer -eq 0 ]; then
+sed -i "s|#decode_WVC1=.*|decode_WVC1=$vc1|" /boot/config.txt
+fi
+}
+
+#update raspbmc-settings addon with sed
+#fix config.txt/addon compatability issues
+do_sedaddon() {
+PCT=0
+( 
+while test $PCT != 100; 
+do 
+PCT=`expr $PCT + 20`; 
+echo $PCT; 
+if [ ! -n "$gpu" ]; then
+gpu=250
+fi
+if [ ! -n "$gpucore" ]; then
+gpucore=250
+fi
+if [ ! -n "$isp" ]; then
+isp=250
+fi
+if [ ! -n "$sdram" ]; then
+sdram=400
+fi
+if [ ! -n "$cpu" ]; then
+cpu=700
+echo "arm_freq=700" >> /boot/config.txt
+fi
+sed -i "s|addition\" value=\".*|addition\" value=\"\" |" /home/pi/.xbmc/userdata/addon_data/script.raspbmc.settings/settings.xml
+sed -i "s|id=\"firstrun\" value=\"true\"|id=\"firstrun\" value=\"false\"|" /home/pi/.xbmc/userdata/addon_data/script.raspbmc.settings/settings.xml
+sed -i "s|overscan\" value=.*|overscan\" value=\"$ans\" />|" /home/pi/.xbmc/userdata/addon_data/script.raspbmc.settings/settings.xml
+sed -i "s|mpg2\" value=.*|mpg2\" value=\"$mpeg\" />|" /home/pi/.xbmc/userdata/addon_data/script.raspbmc.settings/settings.xml
+sed -i "s|wvc1\" value=.*|wvc1\" value=\"$vc1\" />|" /home/pi/.xbmc/userdata/addon_data/script.raspbmc.settings/settings.xml
+sed -i "s|overvolt\" value=.*|overvolt\" value=\"$overvolt\" />|" /home/pi/.xbmc/userdata/addon_data/script.raspbmc.settings/settings.xml
+sed -i "s|overvolt\" value=\"\"|overvolt\" value=\"0\"|" /home/pi/.xbmc/userdata/addon_data/script.raspbmc.settings/settings.xml
+sed -i "s|wvc1\" value=.*|wvc1\" value=\"$vc1\" />|" /home/pi/.xbmc/userdata/addon_data/script.raspbmc.settings/settings.xml
+sed -i "s|arm\" value=.*|arm\" value=\"$cpu\" />|" /home/pi/.xbmc/userdata/addon_data/script.raspbmc.settings/settings.xml
+sed -i "s|core\" value=.*|core\" value=\"$gpucore\" />|" /home/pi/.xbmc/userdata/addon_data/script.raspbmc.settings/settings.xml
+sed -i "s|gpu\" value=.*|gpu\" value=\"$gpu\" />|" /home/pi/.xbmc/userdata/addon_data/script.raspbmc.settings/settings.xml
+sed -i "s|sdram\" value=.*|sdram\" value=\"$sdram\" />|" /home/pi/.xbmc/userdata/addon_data/script.raspbmc.settings/settings.xml
+sed -i "s|isp\" value=.*|isp\" value=\"$isp\" />|" /home/pi/.xbmc/userdata/addon_data/script.raspbmc.settings/settings.xml
+sed -i "s|manual\" value=.*|manual\" value=\"$mode\" />|" /home/pi/.xbmc/userdata/addon_data/script.raspbmc.settings/settings.xml
+sed -i "s|addition\" value=\"\"|addition\" value=\"$hdmi$hdmigp$hdmimd$hdmibst$sdtv$init$sdramv$turbo2$cus1\;$cus2\;$cus3\;$cus4\;$cus5\" />|" /home/pi/.xbmc/userdata/addon_data/script.raspbmc.settings/settings.xml
+sed -i "s|profile\" value=.*|profile\" value=\"$profile\" />|" /home/pi/.xbmc/userdata/addon_data/script.raspbmc.settings/settings.xml
+sed -i 's/;\+"/"/' /home/pi/.xbmc/userdata/addon_data/script.raspbmc.settings/settings.xml
+sed -i "s/sdram_freq=400//" /boot/config.txt
+sed -i '/=$/d' /boot/config.txt
+sed -i "s/#.*//" /boot/config.txt
+sed -i "/^$/d" /boot/config.txt 
+done; ) | whiptail --title ">>> Applying the Magic <<<" --gauge "Abaracadabara...1...2...3..." 20 70 0
+if ! grep gpu_mem /boot/config.txt; then echo "gpu_mem_256=128" >>/boot/config.txt && echo "gpu_mem_512=256" >>/boot/config.txt; fi
+do_View_Current_Config
+do_alldone3
+}
+
+do_danger() {
+whiptail --yesno "Do you wish to set any over-voltage settings? 
+\n\
+WARNING: Over-volting your Raspberry Pi while enabling Force Turbo 'WILL' VOID your warranty!!
+\n
+Choose YES to CONTINUE 
+\n
+or
+\n
+Choose NO to EXIT" 20 60 2 --defaultno	
+if [ $? -eq 0 ]; then # yes
+	  do_overvolt
+fi
+}
+
+#check to see if raspbmc before Magic
+do_isitxbmc() {
+if [ ! -f /splash/splash.png ]; then
+sed -i '/=$/d' /boot/config.txt
+sed -i "s/#.*//" /boot/config.txt
+sed -i "/^$/d" /boot/config.txt
+do_seeconfig
+elif [ -f /splash/splash.png ] && [ ! -f /home/pi/.xbmc/userdata/addon_data/script.raspbmc.settings/settings.xml ]; then
+do_checkaddon 
+elif [ ! -n "$cus1" ] && [ -f /home/pi/.xbmc/userdata/addon_data/script.raspbmc.settings/settings.xml ] && [ ! -n "$profile" ]; then
+sed -i "s/#.*//" /boot/config.txt
+sed -i "/^$/d" /boot/config.txt
+do_startmagic
+elif [ $mode=false ] && [ -n "$profile" ] && [ -f /splash/splash.png ]; then
+whiptail --msgbox "Nearly there.... Configurator will now update the Raspbmc-Settings addon 'Auto-Magically' with all of your additional settings 
+
+Choose OK to complete the update process and view your newly created config.txt file...." 20 60 20
+do_sedaddon
+elif [ -n "$cus1" ] && [ -n "$overvolt" ] && [ -n "$turbo" ] && [ -f /home/pi/.xbmc/userdata/addon_data/script.raspbmc.settings/settings.xml ] && [ ! -n "$profile" ]; then
+do_addturbo2
+do_sedaddon
+else
+whiptail --msgbox "Nearly there.... Configurator will now update the Raspbmc-Settings addon 'Auto-Magically' with all of your additional settings 
+
+Choose OK to complete the update process and view your newly created config.txt file...." 20 60 20
+do_sedaddon
+fi
+}
+
+do_addturbo2() {
+if [ $turbo -eq 1 ] && [ $overvolt -gt 0 ]; then
+$turbo2=force_turbo=$turbo\;
+sed -i "s|force_turbo=1||" /boot/config.txt
+sed -i "s|#forceturbo2a|force_turbo=1|" /boot/config.txt
+whiptail --msgbox "Nearly there.... Configurator will now update the Raspbmc-Settings addon 'Auto-Magically' with all of your additional settings 
+
+Choose OK to complete the update process and view your newly created config.txt file...." 20 60 20
+do_sedaddon
+do_alldone3
+else
+whiptail --msgbox "Nearly there.... Configurator will now update the Raspbmc-Settings addon 'Auto-Magically' with all of your additional settings 
+
+Choose OK to complete the update process and view your newly created config.txt file...." 20 60 20
+do_sedaddon
+do_alldone3
+fi
+}
+
+do_overvolt() {
+overvolt=$(whiptail --inputbox "Please enter your CPU Overvoltage settings - (Enter 1 - 8) 
+Default = 0 - 1.2v
+1 = 1.225v
+2 = 1.250v
+3 = 1.275v
+4 = 1.30v
+5 = 1.325v
+6 = 1.350v
+7 = 1.375v
+8 = 1.40v
+:" 20 70 3>&1 1>&2 2>&3)
+answer=$?
+if [ $answer -eq 0 ]; then
+sed -i "s/#over_voltage=0/over_voltage=$overvolt/" /boot/config.txt
+do_sdram
+else
+do_sdram
+fi
+}
+
+do_sdram() {
+oversdram=$(whiptail --inputbox "Please enter your SDRAM Overvoltage settings - (Enter 1 - 8) 
+Default = 0 - 1.2v
+1 = 1.225v
+2 = 1.250v
+3 = 1.275v
+4 = 1.30v
+5 = 1.325v
+6 = 1.350v
+7 = 1.375v
+8 = 1.40v
+:" 20 70 3>&1 1>&2 2>&3)
+answer=$?
+if [ $answer -eq 0 ]; then
+sed -i "s/#over_voltage_sdram=0/over_voltage_sdram=$oversdram/" /boot/config.txt
+sdramv=over_voltage_sdram=$oversdram\;
+fi
+}
+
+do_raspbmc1() {
+  whiptail --yesno "Would you like to restore the default settings for Raspbmc?
+\n
+Choose YES to RESTORE
+\n
+or
+\n
+NO to EXIT" 20 60 2  --defaultno
+   if [ $? -eq 0 ]; then # yes
+do_restore
+	fi
+
+}
+
+do_restore() {
+clear all
+echo "###############################################################"
+echo "################ Configurator Raspbmc Restore  ################"
+echo "###############################################################"
+echo "##### Backing up /boot/config.txt to /boot/config.txt.old #####"
+mv -f /boot/config.txt /boot/config.txt.old
+sleep 1
+echo "############# Removing existing config.txt file ###############"
+sleep 1
+echo "#### Creating New config.txt file with default RPI values #####"
+sleep 1
+echo "##### Updating Raspbmc-Settings addon to default settings #####"
+sleep 1
+rm -rf /home/pi/.xbmc/userdata/addon_data/script.raspbmc.settings
+touch /boot/config.txt
+echo "
+arm_freq=800
+force_turbo=1 
+disable_overscan=1
+gpu_mem_256=128
+gpu_mem_512=256" > /boot/config.txt
+echo "############# Restoring Raspbmc Default Settings ##############"
+sleep 1
+echo "###############################################################"
+sleep 1
+sed -i "/^$/d" /boot/config.txt
+do_View_Current_Config
+do_alldone3
+}
+
+do_seeconfig() {
+
+ whiptail --textbox /boot/config.txt 25 60   
+do_alldone
+}
+
+do_View_Current_Config() {
+if [ -f /boot/config.txt ]
+then
+ whiptail --textbox /boot/config.txt 30 60
+else
+do_noconfig
+fi
+}
+
+do_View_Backup_Config() {
+if [ -f /boot/config.txt.old ]
+then
+ whiptail --textbox /boot/config.txt.old 25 60
+else
+do_nobackup
+fi
+}
+
+do_Restore_From_Backup_Config() {
+         whiptail --yesno "By choosing the YES button below; YOU (the user) agree that you have read the 'README' and that any loss or damage incurred as a result of using this software is soley the responsibility of YOU (the user) 
+\n\
+Choose YES to AGREE & CONTINUE 
+\n\
+or 
+\n\
+Choose NO to EXIT" 20 60 2 --defaultno  
+if [ $? -eq 0 ]; then # yes
+          do_restore_backup
+        fi
+}
+
+do_restore_backup() {
+if [ $entry -eq 0 ] && [ -f /boot/config.txt.old ]; then # yes
+cp -f /boot/config.txt.old /boot/config.txt
+do_pre_magic
+elif [ $entry -eq 1 ]; then
+do_restart
+else
+do_nobackup
+fi
+}
+
+do_noconfig() {
+ whiptail --msgbox "No config file found, please start a Configurator process to create your config.txt file...." 20 60 2
+}
+
+do_nobackup() {
+ whiptail --msgbox "No config backup file found, backups are automatically created during the Configurator process...." 20 60 2
+}
+
+do_SD_Card_Benchmark() {
+if [ ! -f /usr/bin/pastebinit ] 
+ then
+whiptail --msgbox "First we need to install a couple of dependencies from the repository.
+
+Please make sure that your Pi has an internet connection!
+
+Choose OK to CONTINUE...." 20 60 20
+ apt-get update
+ apt-get -y install pastebinit
+ fi
+#sd-card benchmark
+if [ ! -f /splash/splash.png ] 
+ then
+do_benchmark
+restart=0
+  else
+do_xbmc_shutdown
+fi
+}
+#Ask user to shutdown xbmc
+
+do_xbmc_shutdown() {
+         whiptail --yesno "If XBMC is running, would you like to stop it before continuing with the benchmark?" 20 60 2 --defaultno
+if [ $? -eq 0 ]; then # yes
+          initctl stop xbmc
+	restart=1
+          do_benchmark
+        else
+	restart=0
+         do_benchmark
+        fi
+}
+do_benchmark() {
+ whiptail --msgbox "Choose OK to start the Configurator SD-Card Benchmark" 20 60 2
+clear all
+echo ""
+echo "###############################################################"
+echo "########### Starting Configurator SD-Card Benchmark ###########"
+sleep 1
+echo "###############################################################"
+TFILE="/tmp/$(basename $0).$$.txt"
+
+echo "  >>>>>>>> SD-Card Benchmark by Configurator <<<<<<<<" > $TFILE
+echo "" >> $TFILE
+echo "> SD-Card Identification Number <" >> $TFILE
+echo "##################### Reading SD-Card CID #####################"
+sleep 1
+cd /sys/class/mmc_host/mmc?/mmc?:*
+echo "CID:$(cat cid)" >> $TFILE
+echo "" >> $TFILE
+echo "###############################################################"
+echo "############### Executing SD-Card read benchmark ##############"
+echo "> Read Speed <" >> $TFILE
+dd if=/dev/mmcblk0 of=/dev/null bs=1M count=100 2>> $TFILE
+echo "" >> $TFILE
+echo "> Write Speed <" >> $TFILE
+echo "###############################################################"
+echo "############## Executing SD-Card write benchmark ##############"
+cd /home/pi
+dd if=/dev/zero of=100mb.bin bs=1M count=100 conv=fdatasync 2>> $TFILE
+echo ""
+echo ""
+ whiptail --textbox $TFILE 20 60
+
+     whiptail --yesno "  Would you like to upload your results to Pastebin?
+\n\
+Choose YES to CONTINUE
+\n\
+or
+\n\
+Choose No to EXIT" 20 60 2
+if [ $? -eq 0 ]; then # yes
+touch /tmp/bench.txt
+echo "  >>>>> Your benchmark results are now uploaded <<<<<" > /tmp/bench.txt
+echo "" >> /tmp/bench.txt
+echo "To view your results online go to:" >> /tmp/bench.txt
+echo "" >> /tmp/bench.txt
+pastebinit -i $TFILE -b http://pastebin.com 1>> /tmp/bench.txt
+echo "
+
+
+
+
+
+
+
+
+
+
+Choose OK to Return to Main Menu..." >> /tmp/bench.txt
+ whiptail --textbox /tmp/bench.txt  20 60
+
+rm -f /tmp/$TFILE
+rm -f /tmp/bench.txt
+rm -f /home/pi/100mb.bin
+fi
+if [ $restart -eq 1 ]; then
+do_xbmcrestart
+fi
+}
+
+do_Take_top_Snapshot() {
+touch /tmp/top.txt
+top -i -n 1 -b > /tmp/top.txt
+whiptail --textbox /tmp/top.txt 25 60
+rm -f /tmp/top.txt
+}
+
+do_xbmcrestart() {
+         whiptail --yesno "Would you like to exit Configurator & restart XBMC now?" 20 60 2 --defaultno
+if [ $? -eq 0 ]; then # yes
+initctl start xbmc
+clear all
+exit 1 
+fi
+} 
+
+do_See_CPU_Info() {
+touch /tmp/cpu.txt
+cat "/proc/cpuinfo" 1> /tmp/cpu.txt
+whiptail --textbox /tmp/cpu.txt 25 60
+rm -f /tmp/cpu.txt
+}
+
+do_See_Raspbmc_Build_Info() {
+touch /tmp/build.txt
+cat "/scripts/upd_hist/build_info" 1> /tmp/build.txt
+whiptail --textbox /tmp/build.txt 25 60
+rm -f /tmp/build.txt
+}
+
+#SD Card Image Resizer 
+do_SD_Card_Image_Resizer() {
+ whiptail --msgbox " >>>>> SD Card image resizer for Raspbmc <<<<< 
+
+This utility will resize the Pre-Built Raspbmc image to make full use of your SD Card
+ 
+Choose OK to CONTINUE.... " 20 60 20
+fdisk /dev/mmcblk0 <<EOF
+p
+d
+3
+n
+p
+3
+
+
+w
+
+EOF
+
+
+
+  # now set up Resizer script
+cat <<\EOF > /usr/bin/resizer
+#!/bin/sh
+# Created by Configurator
+# For the completion of the resize of the Raspbmc Pre-Built images only
+clear all
+if [ $(id -u) -ne 0 ]; then
+ printf "Script must be run as root. Try 'sudo resizer' \n"
+  exit 1
+fi
+
+
+    whiptail --msgbox "Press OK to complete the Raspbmc pre-Built image resize process. \n
+
+NOTE: Please be patient as this can take quite a while!
+
+If progress bar seems stuck @ 1%, do not panic, it WILL work!
+ 
+Large SD Cards can take 20 minutes or more to resize...." 20 60 20
+PCT=0
+( 
+while test $PCT != 100; 
+do 
+PCT=`expr $PCT + 1`; 
+echo $PCT; 
+touch /tmp/resizerlog
+resize2fs /dev/mmcblk0p3 > /tmp/resizerlog 2>&1 
+done; ) | whiptail --title ">>> Raspbmc Image Resizer <<<" --gauge "Performing online resize, please wait!" 20 70 0
+touch /tmp/resizer.txt
+echo ">>>>> Raspbmc resize process now complete! <<<<<" > /tmp/resizer.txt
+echo "" >> /tmp/resizer.txt
+echo "" >> /tmp/resizer.txt
+    df -h 1>> /tmp/resizer.txt
+    whiptail --textbox /tmp/resizer.txt 25 60
+whiptail --msgbox "Configurator will now start, press ok to CONTINUE..." 25 60
+   rm -f /tmp/resizer.txt
+# Next command deletes "SD_Card_Image_Resizer" "" \
+# line number needs updating on each new build
+sed -i '2119d' /usr/bin/configurator
+rm -f /usr/bin/resizer
+sleep 0.5
+sudo configurator
+clear all
+exit 1
+EOF
+  chmod +x /usr/bin/resizer
+  whiptail --msgbox "Raspbmc root partition has now been resized.
+
+Please reboot your system and run (sudo resizer) at the command prompt to complete the resize process!" 20 60 20
+
+  whiptail --yesno  "Would you like to reboot now? " --yes-button "Reboot Now" --no-button "Reboot Later" 20 60 20
+exitstatus=$?
+if [ $exitstatus = 0 ]; then
+  whiptail --msgbox "Your system will now reboot....
+
+Once rebooted; Please remember to run (sudo resizer) at the command prompt to complete the resize process...." 20 60 20
+sync
+shutdown -r now "Configurator rebooting Raspberry Pi"
+else
+  whiptail --msgbox "Please remember to reboot your system and run (sudo resizer) at the command prompt to complete the resize process...." 20 60 20
+fi
+}
+
+do_alldone() {
+ whiptail --msgbox "All Done \n 
+Your new settings will take effect after Reboot." 20 60 2
+sed -i "s/#.*//" /boot/config.txt
+sed -i "/^$/d" /boot/config.txt
+echo "# Configured by Configurator" >> /boot/config.txt
+date "+# %c" 1>> /boot/config.txt
+ASK_TO_REBOOT=1
+ do_endgame
+}
+#do_alldone less wild sed 
+do_alldone2() {
+ whiptail --msgbox "All Done \n 
+Your new settings will take effect after Reboot." 20 60 2
+ASK_TO_REBOOT=1
+sed -i "s/# Configured by Configurator//" /boot/config.txt
+echo "# Configured by Configurator" >> /boot/config.txt
+date "+# %c" 1>> /boot/config.txt
+ do_endgame
+}
+
+#alldone for raspbmc-settings compatability 
+do_alldone3() {
+ whiptail --msgbox "All Done! 
+
+Your new settings will take effect after Reboot.
+
+If you are prompted by Raspbmc to update your /boot/config.txt - Simply select YES! " 20 60 2
+sed -i "s/#.*//" /boot/config.txt
+sed -i "/^$/d" /boot/config.txt
+ASK_TO_REBOOT=1
+ do_endgame
+}
+
+
+do_finish() {
+	if [ $ASK_TO_REBOOT -eq 1 ]; then
+	whiptail --yesno "Would you like to reboot your Pi and test your new settings now?" 20 60 2 --defaultno
+	if [ $? -eq 0 ]; then # yes
+printf '\033c'
+sync
+shutdown -r now "Configurator rebooting Raspberry Pi"
+ exit
+  fi
+fi
+clear all
+ exit
+}
+
+
+do_endgame() {
+	if [ $ASK_TO_REBOOT -eq 1 ]; then
+	whiptail --yesno "Would you like to reboot your Pi and test your new settings now?" 20 60 2 defaultno
+	if [ $? -eq 0 ]; then # yes
+printf '\033c'
+sync
+shutdown -r now "Configurator rebooting Raspberry Pi"
+exit 
+  fi
+fi
+#Gameover
+}
+
+do_checkraspbmc() {
+if [ ! -f /splash/splash.png ]
+then
+whiptail --msgbox "Sorry this program will only work with Raspbmc
+
+Choose OK to EXIT...." 20 60 2
+else
+do_checkaddon
+fi
+}
+
+do_checkaddon() {
+if [  -f /home/pi/.xbmc/userdata/addon_data/script.raspbmc.settings/settings.xml ]; then
+do_startmagic
+else
+whiptail --msgbox "Whoops....
+
+...Is this a fresh install or recently restored in Configurator? If so be sure to run the Raspbmc Settings addon just once before attempting to use Magic!
+
+Simply run the raspbmc-settings addon once and let it update, then powerdown the pi and copy your custom config.txt file into its usual place
+in the /boot directory.....Or alternatively just use Configurator to do it all for you!
+
+Then restart Raspbmc (Be sure to Ignore the 'update /boot/config.txt message' and choose NO)....
+
+Then EXIT XBMC and start the Magic....." 20 80 20
+fi
+}
+
+do_Magic() {
+         whiptail --yesno "By choosing the YES button below; YOU (the user) agree that you have read the 'README' and that any loss or damage incurred as a result of using this software is soley the responsibility of YOU (the user) 
+\n\
+Choose YES to AGREE & CONTINUE 
+\n\
+or 
+\n\
+Choose NO to EXIT" 20 60 2 --defaultno  
+if [ $? -eq 0 ]; then # yes
+          do_pre_magic
+        fi
+}
+
+do_pre_magic() {
+if [ $entry -eq 0 ]; then # yes
+ASK_TO_REBOOT=1
+do_checkraspbmc
+else
+do_restart
+fi
+}
+
+do_startmagic() {
+clear all
+if [ ! -f /boot/config.txt ] 
+ then
+do_noconfig
+fi
+whiptail --msgbox "Magic will now import all of your config.txt entries into the Raspbmc-Settings addon.
+
+Choose OK to START the Magic...." 20 60 2
+entry=1
+cp -f /boot/config.txt /boot/config.txt.old
+do_createconfig
+do_stringvars
+}
+
+do_stringvars() {
+. /boot/config.txt.old
+mode=true
+profile=0
+if [ -n "$hdmi_force_hotplug" ]; then
+hdmi=hdmi_force_hotplug=$hdmi_force_hotplug\;
+fi
+if [ -n "$hdmi_group" ]; then
+hdmigp=hdmi_group=$hdmi_group\;
+fi
+if [ -n "$hdmi_mode" ]; then
+hdmimd=hdmi_mode=$hdmi_mode\;
+fi
+if [ -n "$config_hdmi_boost" ]; then
+hdmibst=config_hdmi_boost=$config_hdmi_boost\;
+fi
+if [ -n "$sdtv_mode" ]; then
+sdtv=sdtv_mode=$sdtv_mode\;
+fi
+if [ -n "$init_emmc_freq" ]; then
+init=init_emmc_freq=$init_emmc_freq\;
+fi
+if [ -n "$over_voltage_sdram" ]; then
+sdramv=over_voltage_sdram=$over_voltage_sdram\;
+fi
+if [ -n "$arm_freq" ]; then
+cpu=$arm_freq
+fi
+if [ -n "$core_freq" ]; then
+gpucore=$core_freq
+fi
+if [ -n "$isp_freq" ]; then
+isp=$isp_freq
+fi
+if [ -n "$gpu_freq" ]; then
+gpu=$gpu_freq
+fi
+if [ -n "$sdram_freq" ]; then
+sdram=$sdram_freq
+fi
+if [ -n "$force_turbo" ]; then
+turbo=$force_turbo
+fi
+if [ -n "$over_voltage" ] && [ -n "$force_turbo" ]; then
+do_turbo2
+#do_checkoverscan
+#overvolt=$over_voltage
+elif [ -n "$over_voltage" ]; then
+overvolt=$over_voltage
+do_checkoverscan
+else
+do_checkoverscan
+fi
+}
+
+do_turbo2() {
+overvolt=$over_voltage
+if [ -n "$turbo" ]; then
+turbo2=force_turbo=$force_turbo\;
+sed -i "s|#force_turbo.*||" /boot/config.txt
+sed -i "s|#forceturbo2a|$turbo2|" /boot/config.txt
+do_checkoverscan
+fi
+}
+
+do_checkoverscan() {
+overscan=$disable_overscan
+if [ -n "$overscan" ]; then
+do_contstringvars
+else
+overscan=1
+answer=true
+do_contstringvars
+fi
+}
+
+do_contstringvars() {
+if [ $overscan -eq 1 ]; then
+ans=true
+do_morestringvars
+else
+ans=false
+do_morestringvars
+fi
+}
+
+do_morestringvars() {
+mpeg=$decode_MPG2
+vc1=$decode_WVC1
+if [ -n "$over_voltage" ] && [ -n "$turbo" ]; then #Disclaimer
+do_voidwarranty
+else
+do_rabbitinthehat
+fi
+}
+
+#Damn those rabbits
+do_rabbitinthehat() {
+if [ -n "$overvolt" ]; then 
+do_isthistherabbit3
+elif [ -n "$overvolt" ] && [ -n "$turbo" ]; then
+do_updateconfig
+else
+do_wherestherabbit
+fi
+}
+
+do_wherestherabbit() {
+if [ -n "$cpu" ] && [ -n "$turbo" ] && [ -n "$overscan" ]; then
+do_isthistherabbit
+else
+do_updateconfig
+fi
+}
+
+do_isthistherabbit() {
+if [ "$cpu" -eq 800 ] && [ "$turbo" -eq 1 ] && [ -n "$overscan" ]; then
+mode=false
+profile=0
+overvolt=0
+do_updateconfig
+else
+do_therewasnorabbit
+fi
+}
+do_therewasnorabbit() {
+if [ -n "$cpu" ] && [ -n "$gpucore" ] && [ -n "$overscan" ] && [ -n "$turbo" ] && [ -n "$gpu" ]; then
+do_isthistherabbit2
+else
+do_updateconfig
+fi
+}
+
+do_isthistherabbit2() {
+if [ "$cpu" -eq 840 ] && [ "$gpucore" -eq 350 ] && [ "$gpu" -eq 253 ] && [ "$turbo" -eq 1 ] && [ "$overscan" -eq 1 ]; then
+rabbit=0
+mode=false
+profile=1
+overvolt=0
+do_updateconfig
+else
+do_therewasnorabbit2
+fi
+}
+
+do_therewasnorabbit2() {
+if [ -n "$cpu" ] && [ -n "$overvolt" ] && [ -n "$overscan" ] && [ -n "$gpucore" ] && [ -n "$gpu" ] && [ -n "$sdram" ]; then
+do_isthistherabbit3
+else
+do_updateconfig
+fi
+}
+
+do_isthistherabbit3() {
+if [ "$cpu" -eq 950 ] && [ "$gpucore" -eq 450 ] && [ "$isp" -eq 450 ] && [ "$sdram" -eq 450 ] && [ "$overscan" -eq 1 ] && [ "$overvolt" -eq 6 ]; then
+rabbit=0
+mode=false
+profile=2
+do_updateconfig
+else
+do_updateconfig
+fi
+}
+
+do_voidwarranty() {
+if [ $turbo -eq 1 ]; then
+do_warning
+else
+do_rabbitinthehat
+fi
+}
+
+do_warning() {
+whiptail --yesno "WARNING!! \
+Magic has noticed that you are Overvolting while using Turbo mode, Please be aware that these settings WILL VOID your warranty if you CONTINUE...." 20 60 2 --defaultno --yes-button "CONTINUE" --no-button "EXIT"
+if [ $? -eq 0 ]; then 
+do_updateconfig
+elif [ $? -eq 1 ]; then
+do_dontvoid
+cp -f /boot/config.txt.old /boot/config.txt
+fi
+}
+
+do_dontvoid() {
+whiptail --msgbox "Magic will now EXIT, Please ammend your config.txt settings and run Magic again...." 20 60 2
+} 
+
+do_updateconfig() {
+sed -i "s|#hdmi_force_hotplug.*|$hdmi|" /boot/config.txt
+sed -i "s|#hdmi_group.*|$hdmigp|" /boot/config.txt
+sed -i "s|#hdmi_mode.*|$hdmimd|" /boot/config.txt
+sed -i "s|#config_hdmi_boost.*|$hdmibst|" /boot/config.txt
+sed -i "s|#sdtv_mode.*|$sdtv|" /boot/config.txt
+sed -i "s|#init_emmc_freq.*|$init|" /boot/config.txt
+sed -i "s|#over_voltage_sdram.*|$sdramv|" /boot/config.txt
+sed -i "s|#arm_freq.*|arm_freq=$cpu|" /boot/config.txt
+sed -i "s|#core_freq.*|core_freq=$gpucore|" /boot/config.txt
+sed -i "s|#isp_freq.*|isp_freq=$isp|" /boot/config.txt
+sed -i "s|#gpu_freq.*|gpu_freq=$gpu|" /boot/config.txt
+sed -i "s|#sdram_freq.*|sdram_freq=$sdram|" /boot/config.txt
+sed -i "s|#force_turbo.*|force_turbo=$turbo|" /boot/config.txt
+sed -i "s|#disable_overscan.*|disable_overscan=$overscan|" /boot/config.txt
+sed -i "s|#decode_MPG2.*|decode_MPG2=$mpeg|" /boot/config.txt
+sed -i "s|#decode_WVC1.*|decode_WVC1=$vc1|" /boot/config.txt
+sed -i "s|#over_voltage.*|over_voltage=$overvolt|" /boot/config.txt
+sed -i "s|over_voltage=0||" /boot/config.txt
+sed -i "s|force_turbo=0||" /boot/config.txt
+sed -i "s|;||" /boot/config.txt
+do_sedaddon
+}
+
+do_2a() {
+         whiptail --yesno "Select which mode you would like Configurator to run in..." 20 60 2 --defaultno --yes-button "Advanced Mode" --no-button "Normal Mode"  
+if [ $? -eq 0 ]; then # yes
+	mode=true
+        do_$mode #do_true = advanced
+	else
+        mode=false
+        do_$mode #do_false = normal
+        fi
+}
+
+do_restart() {
+whiptail --msgbox "Configurator requires a restart in between uses!
+
+Choose OK to RESTART Configurator now..." 20 60 2
+if [ ! -f /splash/splash.png ] 
+ then
+sudo configurator
+killall configurator
+else
+sudo configurator
+clear all
+ exit
+fi
+}
+#Update System
+do_Check_For_Updates() {
+whiptail --msgbox "Configurator will now check for any available updates....
+
+Please make sure you have a valid internet connection!
+
+Click OK to proceed...." 20 60 20
+PCT=0
+( 
+while test $PCT != 100; 
+do 
+PCT=`expr $PCT + 5`; 
+echo $PCT; 
+GIT-wget http://www.juicypi.com/downloads/configurator_updates/version -O /tmp/version > /tmp/updatelog 2>&1 
+done; ) | whiptail --title ">>> Configurator Updater <<<" --gauge "Connecting to update server & checking for any available updates...." 20 60 0
+. /tmp/version
+if [ -n "$UPDATE" ] && [ $VERSION -eq $UPDATE ]; then
+whiptail --msgbox "The latest version of Configurator is already installed on your system!
+
+Click OK to return to main menu...." 20 60 20
+rm -f /tmp/version
+elif [ ! -n "$UPDATE" ]; then
+whiptail --msgbox "There was an error connecting to the update server, please check your internet connection and try again...." 20 60 20
+do_System_Tools
+else 
+
+whiptail --msgbox "A more recent version of Configurator is available for download
+
+Click OK to download now..." 20 60 20
+DWL=0
+( 
+while test $DWL != 100; 
+do
+DWL=`expr $DWL+ 5`; 
+echo $DWL; 
+GIT-wget http://www.juicypi.com/downloads/configurator_updates/configurator -O /usr/bin/configurator > /tmp/updatelog 2>&1 
+done; ) | whiptail --title ">>> Configurator Updater <<<" --gauge "Downloading and installing update, please wait....." 20 60 0
+rm -f /tmp/version
+do_restart2
+fi
+}
+
+do_restart2() {
+whiptail --msgbox "All Done!
+
+Configurator now requires a restart to apply the new update!
+
+Choose OK to RESTART Configurator now..." 20 60 2
+if [ ! -f /splash/splash.png ] 
+ then
+sudo configurator
+killall configurator
+else
+sudo configurator
+clear all
+ exit
+fi
+}
+
+do_FTP_Backup_Restore_XBMC() {
+if [ ! -f /splash/splash.png ]; then
+whiptail --msgbox "This tool is only designed for Raspbmc!" 20 60 20
+do_System_Tools
+else
+do_pingftptest
+fi
+}
+
+do_pingftptest() {
+if ping -c 1 4.2.2.1 > /dev/null; then
+do_checklftp
+else
+whiptail --msgbox "No valid internet connection detected!
+
+Please check your settings and try again...." 20 60 20
+do_System_Tools
+fi
+}
+
+do_checklftp() {
+if [ ! -f /usr/bin/lftp ] 
+ then
+whiptail --msgbox "First we need to install a couple of dependencies.
+
+Please make sure you have a valid internet connection.
+
+Choose OK to CONTINUE...." 20 60 20
+
+apt-get update
+apt-get -y install lftp
+
+fi 
+
+whiptail --yesno "Would you like to Backup or Restore XBMC?" 20 60 20 --defaultno --yes-button "Backup" --no-button "Restore"
+if [ $? -eq 0 ]; then 
+do_Backup
+else
+do_Restore
+fi
+}
+
+do_Restore(){
+whiptail --yesno "Before continuing, do you wish to view the backup files on your FTP server? " 20 60 20
+if [ $? -eq 0 ]; then
+do_viewbackups
+else
+whiptail --msgbox "Configurator will now Restore XBMC from your chosen Backup file.
+
+Press OK to Continue...." 20 60 20
+NAME=$(whiptail --inputbox "Please enter the name of the XBMC Backup you wish to Restore...?
+
+NOTE: The .tar.gz part is entered automatically!" 20 60 3>&1 1>&2 2>&3)
+
+answer=$?
+if [ $answer -eq 0 ]; then
+NAME=$NAME
+fi
+FTP=$(whiptail --inputbox "Please enter your FTP address?" 20 60 3>&1 1>&2 2>&3)
+
+answer=$?
+if [ $answer -eq 0 ]; then
+FTP=$FTP
+fi
+USER=$(whiptail --inputbox "Please enter your FTP Login Username?" 20 60 3>&1 1>&2 2>&3)
+
+answer=$?
+if [ $answer -eq 0 ]; then
+USER=$USER
+fi
+
+PASS=$(whiptail --passwordbox "Please enter your FTP Login Password?
+
+NOTE:Entry is hidden for security purposes...." 20 60 3>&1 1>&2 2>&3)
+
+answer=$?
+if [ $answer -eq 0 ]; then
+PASS=$PASS
+fi
+do_getfile
+fi
+}
+
+do_viewbackups() {
+FTP=$(whiptail --inputbox "Please enter your FTP address?" 20 60 3>&1 1>&2 2>&3)
+
+answer=$?
+if [ $answer -eq 0 ]; then
+FTP=$FTP
+fi
+USER=$(whiptail --inputbox "Please enter your FTP Login Username?" 20 60 3>&1 1>&2 2>&3)
+
+answer=$?
+if [ $answer -eq 0 ]; then
+USER=$USER
+fi
+
+PASS=$(whiptail --passwordbox "Please enter your FTP Login Password?
+
+NOTE:Entry is hidden for security purposes...." 20 60 3>&1 1>&2 2>&3)
+
+answer=$?
+if [ $answer -eq 0 ]; then
+PASS=$PASS
+fi
+touch /tmp/ftp.txt
+echo ">>>> Below is a snapshot of your current FTP backup directory <<<<" > /tmp/ftp.txt
+echo "" >> /tmp/ftp.txt
+lftp -e "ls ; bye" -u $USER,$PASS $FTP >> /tmp/ftp.txt
+echo "" >> /tmp/ftp.txt
+echo "" >> /tmp/ftp.txt
+echo "Choose OK to CONTINUE..." >> /tmp/ftp.txt
+whiptail --textbox /tmp/ftp.txt  25 60
+rm -f /tmp/ftp.txt
+NAME=$(whiptail --inputbox "Please enter the name of the XBMC Backup you wish to Restore...?
+
+NOTE: The .tar.gz part is entered automatically!" 20 60 3>&1 1>&2 2>&3)
+
+answer=$?
+if [ $answer -eq 0 ]; then
+NAME=$NAME
+fi
+whiptail --msgbox "Choose OK to Continue with restore....." 20 60 20
+do_getfile
+}
+
+do_getfile() {
+UPL=0
+( 
+while test $UPL != 100; 
+do
+UPL=`expr $UPL + 25`; 
+echo $UPL;
+cd  /home/pi/
+set xfer:clobber on
+lftp -e "get $NAME.tar.gz; bye" -u $USER,$PASS $FTP > /tmp/debuglftp.log 2>&1 
+done; ) | whiptail --title ">>> Downloading "$NAME".tar.gz from "$FTP" <<<" --gauge "Please Wait..." 20 70 0
+if [ ! -f /home/pi/$NAME.tar.gz ]; then
+whiptail --msgbox "There was error downloading your backup file!
+please check your settings & internet connection and try again!" 20 60 20
+do_System_Tools
+elif [ -f /home/pi/$NAME.tar.gz ];then
+do_allok
+fi
+}
+
+do_allok() {
+whiptail --msgbox "All Done!
+
+Your XBMC backup file named: "$NAME".tar.gz
+Has been succesfully downloaded from: "$FTP"
+
+Choose OK to Restore from this backup! " 20 60 20
+whiptail --yesno "NOTE: It is recommended that XBMC is stopped before continuing!
+
+Do you wish to stop XBMC now?" 20 60 20
+
+if [ $? -eq 0 ]; then
+STOP=1
+initctl stop xbmc
+do_restorexbmc
+else
+STOP=0
+do_restorexbmc
+fi
+}
+
+do_restorexbmc() {
+RST=0
+( 
+while test $RST != 100; 
+do
+RST=`expr $RST + 25`; 
+echo $RST;
+#cd
+#mv -f $NAME.tar.gz /home/pi/$name.tar.gz
+tar -xzf /home/pi/$NAME.tar.gz
+done; ) | whiptail --title ">>> Restoring "$NAME".tar.gz Backup <<<" --gauge "Please Wait..." 20 70 0
+whiptail --msgbox "All Done!
+
+Your xbmc backup named "$NAME".tar.gz has been successfully restored!
+
+Choose OK to CONTINUE...." 20 60 20
+
+if [ $STOP -eq 1 ]; then
+rm -f /home/pi/$NAME.tar.gz
+do_startmagic
+do_xbmcrestart
+else
+rm -f /home/pi/$NAME.tar.gz
+whiptail --msgbox "Please restart XBMC to apply your new changes!" 20 60 20
+do_startmagic
+fi
+
+}
+
+do_Backup() {
+whiptail --msgbox "Configurator will now make a Backup of XBMC, ready for FTP transfer.
+
+Press OK to CONTINUE...." 20 60 20
+NAME=$(whiptail --inputbox "Please enter a name for your XBMC Backup file?" 20 60 3>&1 1>&2 2>&3)
+
+answer=$?
+if [ $answer -eq 0 ]; then
+TAR=0
+( 
+while test $TAR != 100; 
+do
+TAR=`expr $TAR + 25`; 
+echo $TAR; 
+cd /home/pi
+tar -czf $NAME.tar.gz .xbmc
+cp -f /home/pi/$NAME.tar.gz /tmp/
+done; ) | whiptail --title ">>> Creating Backup <<<" --gauge "Please Wait..." 20 70 0
+FTP=$(whiptail --inputbox "Please enter your FTP address?" 20 60 3>&1 1>&2 2>&3)
+
+answer=$?
+if [ $answer -eq 0 ]; then
+FTP=$FTP
+fi
+USER=$(whiptail --inputbox "Please enter your FTP Login Username?" 20 60 3>&1 1>&2 2>&3)
+
+answer=$?
+if [ $answer -eq 0 ]; then
+USER=$USER
+fi
+
+PASS=$(whiptail --passwordbox "Please enter your FTP Login Password?
+
+NOTE:Entry is hidden for security purposes...." 20 60 3>&1 1>&2 2>&3)
+
+answer=$?
+if [ $answer -eq 0 ]; then
+PASS=$PASS
+fi
+
+UPL=0
+( 
+while test $UPL != 100; 
+do
+UPL=`expr $UPL + 25`; 
+echo $UPL; 
+lftp -e "put /tmp/$NAME.tar.gz; bye" -u $USER,$PASS $FTP
+done; ) | whiptail --title ">>> Uploading to FTP <<<" --gauge "Please Wait..." 20 70 0
+whiptail --msgbox "All Done!
+
+Your XBMC backup file named: "$NAME".tar.gz
+Has been succesfully saved to: "$FTP"
+
+Please make a note of these details! " 20 60 20
+rm -f /tmp/$NAME.tar.gz
+fi
+}
+#### Begin Dropbox 
+do_Dropbox_Backup_Restore_XBMC() {
+if [ ! -f /splash/splash.png ]; then
+whiptail --msgbox "This tool is only for Raspbmc please use the 'Anyfile to Dropbox' tool instead!" 20 60 20
+do_System_Tools
+else
+do_pingtest
+fi
+}
+
+do_Raspbmc_Build_Info() {
+if [ ! -f /splash/splash.png ]; then
+whiptail --msgbox "This tool is only for use with Raspbmc!" 20 60 20
+do_System_Tools
+else
+do_See_Raspbmc_Build_Info
+fi
+}
+
+
+do_pingtest() { 
+if ping -c 1 4.2.2.1 > /dev/null; then
+do_checkdropbox
+else
+whiptail --msgbox "No valid internet connection detected!
+
+Please check your settings and try again...." 20 60 20
+do_System_Tools
+fi
+}
+
+do_checkdropbox() {
+cd
+if [ ! -f /usr/bin/configurator_dropbox ]; then
+whiptail --msgbox "First we need to download & install the Configurator Dropbox addon.
+
+Choose OK to CONTINUE...." 20 60 20
+touch /tmp/.dropbox_update
+PCT=0
+( 
+while test $PCT != 100; 
+do 
+PCT=`expr $PCT + 20`; 
+echo $PCT; 
+wget http://www.juicypi.com/downloads/configurator_dropbox -O /usr/bin/configurator_dropbox > /tmp/debugwget.log 2>&1 
+chmod +x /usr/bin/configurator_dropbox
+done; ) | whiptail --title ">>> Configurator Downloader <<<" --gauge "Downloading & installing the Configurator Dropbox addon, please wait....." 20 70 0
+configurator_dropbox
+do_choices
+elif [ -f /usr/bin/configurator_dropbox ] && [ ! -f .dropbox_uploader ]; then
+configurator_dropbox
+do_choices
+else
+do_choices
+fi
+}
+
+do_choices() {
+whiptail --yesno "Would you like to Backup or Restore from your Dropbox account?" 20 60 20 --no-button "Backup" --yes-button "Restore"
+if [ $? -eq 0 ]; then
+do_dbrestore
+else
+do_dbbackup
+fi
+}
+
+do_dbbackup() {
+NAME=$(whiptail --inputbox "Please enter a name for your XBMC backup..." 20 70 3>&1 1>&2 2>&3)
+if [ $? -eq 0 ]; then
+NAME=$NAME
+fi
+DEST=$(whiptail --inputbox "Please enter the name of the Dropbox folder you would like to save to...
+
+or 
+
+Leave blank to upload to the root of your Dropbox..." 20 70 3>&1 1>&2 2>&3)
+if [ $? -eq 0 ]; then
+DEST=$DEST
+fi
+PCT=0
+( 
+while test $PCT != 100; 
+do 
+PCT=`expr $PCT + 100`; 
+echo $PCT; 
+cd /home/pi
+tar -czf $NAME.tar.gz .xbmc > /tmp/debugtar.log 2>&1 
+done; ) | whiptail --title ">>> Creating Backup <<<" --gauge "Creating backup file: "$NAME".tar.gz - Please Wait..." 20 70 0
+
+whiptail --msgbox "Your backup of: "$NAME".tar.gz
+
+to
+
+Dropbox folder: "$DEST" will now commence.
+
+Choose OK to CONTINUE...." 20 60 20
+configurator_dropbox upload /home/pi/$NAME.tar.gz /$DEST/$NAME.tar.gz
+whiptail --msgbox "All done!
+
+Choose OK to return to main menu...." 20 60 20
+rm -f /home/pi/$NAME.tar.gz
+}
+
+do_dbrestore() {
+NAME=$(whiptail --inputbox "Please enter a name for the XBMC backup you would like to Restore...
+
+NOTE: The .tar.gz part is automatically added!" 20 70 3>&1 1>&2 2>&3)
+if [ $? -eq 0 ]; then
+NAME=$NAME
+fi
+DEST=$(whiptail --inputbox "Please enter the name of the Dropbox folder where you backup is located
+
+or
+
+Leave blank if the location is your Dropbox root..." 20 70 3>&1 1>&2 2>&3)
+if [ $? -eq 0 ]; then
+DEST=$DEST
+fi
+
+whiptail --msgbox "Your XBMC restore of: "$NAME".tar.gz
+
+from
+
+Dropbox folder: "$DEST" will now commence.
+
+Choose OK to CONTINUE...." 20 60 20
+
+configurator_dropbox download /$DEST/$NAME.tar.gz /home/pi/$NAME.tar.gz
+PCT=0
+( 
+while test $PCT != 100; 
+do 
+PCT=`expr $PCT + 100`; 
+echo $PCT; 
+cd /home/pi
+tar -xzf $NAME.tar.gz > /tmp/debugtar.log 2>&1 
+rm -f $NAME.tar.gz > /tmp/debugtar.log 2>&1 
+done; ) | whiptail --title ">>> Restoring Backup <<<" --gauge "Restoring XBMC backup file: "$NAME".tar.gz - Please Wait..." 20 70 0
+whiptail --msgbox "All done!
+
+Configurator will now update the Raspbmc-Settings addon.
+
+Choose OK to CONTINUE...." 20 60 20
+do_startmagic
+}
+#### End Raspbmc Dropbox
+#### Begin Anyfile Dropbox
+do_Dropbox() { 
+if ping -c 1 4.2.2.1 > /dev/null; then
+do_Dropboxstart
+else
+whiptail --msgbox "No valid internet connection detected!
+
+Please check your settings and try again...." 20 60 20
+do_System_Tools
+fi
+}
+
+do_Dropboxstart() {
+cd
+if [ ! -f /usr/bin/configurator_dropbox ]; then
+whiptail --msgbox "First we need to download & install the Configurator Dropbox addon.
+
+Choose OK to CONTINUE...." 20 60 20
+PCT=0
+( 
+while test $PCT != 100; 
+do 
+PCT=`expr $PCT + 20`; 
+echo $PCT; 
+GIT-wget http://www.juicypi.com/downloads/configurator_dropbox -O /usr/bin/configurator_dropbox > /tmp/debugwget.log 2>&1 
+chmod +x /usr/bin/configurator_dropbox
+done; ) | whiptail --title ">>> Configurator Downloader <<<" --gauge "Downloading & installing the Configurator Dropbox addon, please wait....." 20 70 0
+configurator_dropbox
+whiptail --msgbox "Providing the Dropbox setup completed successfully; You can now upload/download files to/from your Dropbox account, simply select Dropbox from the Configurator System Tools menu!" 20 60 20
+do_System_Tools
+elif [ -f /usr/bin/configurator_dropbox ] && [ ! -f .dropbox_uploader ]; then
+configurator_dropbox
+whiptail --msgbox "Providing the Dropbox setup completed successfully; You can now upload/download files to/from your Dropbox account, simply select Dropbox from the Configurator System Tools menu!" 20 60 20
+do_System_Tools
+else
+do_choices1
+fi
+}
+do_choices1() {
+whiptail --yesno "Would you like to Upload to, or Download from, your Dropbox account?" 20 60 20 --no-button "Upload" --yes-button "Download"
+if [ $? -eq 0 ]; then
+do_Download
+else
+do_Upload
+fi
+}
+
+do_Upload() {
+LOC=$(whiptail --inputbox "Please enter the full path to the folder where the file you wish to upload is located
+
+EG: /path/to/file/location" 20 70 3>&1 1>&2 2>&3)
+if [ $? -eq 0 ]; then
+LOC=/$LOC
+fi
+
+NAME=$(whiptail --inputbox "Please enter the name of the file you wish to upload.
+
+NOTE: Please include the file extension if present!
+
+EG: myfile.txt or myfile.tar.gz" 20 70 3>&1 1>&2 2>&3)
+if [ $? -eq 0 ]; then
+NAME=/$NAME
+fi
+
+DEST=$(whiptail --inputbox "Please enter the full path to the Dropbox folder you would like to save to...
+
+
+EG: /myuploads
+
+or 
+
+Leave blank to upload to the root of your Dropbox..." 20 70 3>&1 1>&2 2>&3)
+if [ $? -eq 0 ]; then
+DEST=/$DEST
+fi
+
+whiptail --msgbox "Your upload: "$LOC"/"$NAME" 
+
+to
+
+Dropbox folder: "$DEST" will now commence.
+
+Choose OK to CONTINUE...." 20 60 20
+configurator_dropbox upload /$LOC/$NAME /$DEST/$NAME
+whiptail --msgbox "All done!
+
+Choose OK to return to main menu...." 20 60 20
+}
+do_Download() {
+NAME=$(whiptail --inputbox "Please enter a the name of the file you would like to download..." 20 70 3>&1 1>&2 2>&3)
+if [ $? -eq 0 ]; then
+NAME=$NAME
+fi
+DEST=$(whiptail --inputbox "Please enter the name of the Dropbox folder where your file is located
+
+or
+
+Leave blank if the location is your Dropbox root..." 20 70 3>&1 1>&2 2>&3)
+if [ $? -eq 0 ]; then
+DEST=$DEST
+fi
+
+whiptail --msgbox "Your Download of: "$NAME"
+
+from
+
+Dropbox folder: "$DEST" will now commence.
+
+Choose OK to CONTINUE...." 20 60 20
+
+configurator_dropbox download /$DEST/$NAME /tmp/$NAME
+
+whiptail --msgbox "All done!
+
+Your Dropbox download is located @ /tmp/$NAME
+
+Choose OK to return to the main menu...." 20 60 20
+
+}
+
+do_Configure_Auto_Updater() {
+whiptail --yesno "Enable or Disable Auto-Updater at Startup?" --defaultno --no-button Enable --yes-button Disable 20 60 20
+if [ $? -eq 0 ]; then
+touch  /home/pi/.noauto
+elif [ $? -eq 1 ] && [ -f /home/pi/.noauto ]; then
+rm -f /home/pi/.noauto
+fi
+}
+
+#### End Anyfile Dropbox 
+do_System_Tools() {
+  SYS=$(whiptail --menu "                       ******* System Tools *******" 20 80 12 --cancel-button Main_Menu --ok-button Select \
+	"Check_For_Updates" "" \
+	"Configure_Auto_Updater" "" \
+	"SD_Card_Benchmark" "" \
+	"CPU_Info" "" \
+	"Raspbmc_Build_Info" "" \
+	"Take_top_Snapshot" "" \
+	"Restore_Raspbmc_Defaults" "" \
+	"FTP_Backup_Restore_XBMC" "" \
+	"Dropbox_Backup_Restore_XBMC" "" \
+	"Dropbox" "" \
+	3>&1 1>&2 2>&3)
+  RET=$?
+  if [ $RET -eq 0 ]; then
+        "do_$SYS" || whiptail --msgbox "There was an error running do_$SYS" 20 60 1
+  fi
+}
+
+
+while true; do
+  CONFIG=$(whiptail --menu "                       ******** CONFIGURATOR ********" 20 80 12 --cancel-button Finish --ok-button Select \
+	"Readme" "" \
+	"Configurator" "" \
+	"Custom_Configurator" "" \
+	"View_Current_Config" "" \
+	"View_Backup_Config" "" \
+	"Restore_From_Backup_Config" "" \
+	"Magic" "" \
+	"System_Tools" "" \
+	3>&1 1>&2 2>&3)
+  RET=$?
+  if [ $RET -eq 1 ]; then
+	do_finish
+  elif [ $RET -eq 0 ]; then
+	"do_$CONFIG" || whiptail --msgbox "There was an error running do_$CONFIG" 20 60 1
+  else
+	exit 1
+  fi
+done
+
+
+
+
+
+
+
+
+
+
+
+
+
