@@ -121,7 +121,7 @@ fi
 }
 
 do_agreement() {
-   whiptail --yesno "By choosing the YES button below; YOU (the user) agree that you have read the 'README' and that any loss or damage incurred as a result of using this software is soley the responsibility of YOU (the user) 
+	 whiptail --yesno "By choosing the YES button below; YOU (the user) agree that you have read the 'README' and that any loss or damage incurred as a result of using this software is soley the responsibility of YOU (the user) 
 \n\
 Choose YES to AGREE & CONTINUE 
 \n\
