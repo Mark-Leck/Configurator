@@ -2,7 +2,7 @@ To install directly from this git, simply COPY & PASTE the block of code below i
 
 sudu su
 cd /usr/bin/
-wget https://raw.github.com/Mark-Leck/Configurator/master/configurator
+wget --no-check-certificate https://raw.github.com/Mark-Leck/Configurator/master/configurator
 chmod +x configurator
 configurator
 echo "Done!"
