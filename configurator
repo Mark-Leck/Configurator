@@ -41,7 +41,7 @@ sleep 2
  fi
 entry=0
 ASK_TO_REBOOT=0
-VERSION=27022013
+VERSION=28022013
 
 if [ -f /usr/bin/configurator_dropbox ] && [ ! -f /tmp/.dropbox_update ]; then
 rm -f /usr/bin/configurator_dropbox
@@ -806,6 +806,7 @@ sed -i "s/#.*//" /boot/config.txt
 sed -i "/^$/d" /boot/config.txt 
 done; ) | whiptail --title ">>> Applying the Magic <<<" --gauge "Abaracadabara...1...2...3..." 20 70 0
 if ! grep gpu_mem /boot/config.txt; then echo "gpu_mem_256=128" >>/boot/config.txt && echo "gpu_mem_512=256" >>/boot/config.txt; fi
+if [ -f /splash/splash.png]; then echo "start_file=start_x.elf" >>/boot/config.txt && echo "fixup_file=fixup_x.dat" >>/boot/config.txt; fi
 do_View_Current_Config
 do_alldone3
 }
@@ -948,7 +949,9 @@ arm_freq=800
 force_turbo=1 
 disable_overscan=1
 gpu_mem_256=128
-gpu_mem_512=256" > /boot/config.txt
+gpu_mem_512=256
+start_file=start_x.elf
+fixup_file=fixup_x.dat" > /boot/config.txt
 echo "############# Restoring Raspbmc Default Settings ##############"
 sleep 1
 echo "###############################################################"
