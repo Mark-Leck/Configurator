@@ -41,7 +41,7 @@ sleep 2
  fi
 entry=0
 ASK_TO_REBOOT=0
-VERSION=28022013
+VERSION=29022013
 
 if [ -f /usr/bin/configurator_dropbox ] && [ ! -f /tmp/.dropbox_update ]; then
 rm -f /usr/bin/configurator_dropbox
@@ -94,7 +94,8 @@ done
 
 
 do_Readme() {
-  whiptail --msgbox "Configurator is the easy way to write & edit the config.txt file for your Raspberry Pi \n
+  whiptail --msgbox "Version:$VERSION
+Configurator is the easy way to write & edit the config.txt file for your Raspberry Pi \n
 Configurator now offers a full GUI in both Advanced & Normal program modes & covers the vast majority of regulary used settings + 5 custom entries can also be added also includes the Magic AI system for Raspbmc users. \n
 Custom Configurator allows up to 15 entries (this is for those who like to be in full control).\n
 Benchmarking & tools now added with upload results to pastebin feature.\n
